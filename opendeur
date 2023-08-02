@@ -1,0 +1,159 @@
+
+Public OntbrekendeAntwoorden_opendeur As String
+Dim CountdownOpenDeur As Date
+Dim StopTimerOpenDeur As Boolean
+Dim VolgendeTimerUitvoering As Date
+Dim Spelblad As Worksheet
+Dim TijdCel As Range
+Dim SpelBronBlad As Worksheet
+
+Sub StartSpel_OpenDeur()
+    Application.ScreenUpdating = False
+    Set Spelblad = ThisWorkbook.Sheets("Open Deur")
+    Set TijdCel = Spelblad.Range("B1")
+    Set SpelBronBlad = ThisWorkbook.Sheets("Open Deur")
+    
+    TijdCel.Value = SpelBronBlad.Range("B1").Value - 0
+
+    If IsNumeric(TijdCel.Value) And TijdCel.Value > 0 Then
+        StopTimerOpenDeur = False
+        CountdownOpenDeur = (TijdCel.Value + 2) / 24 / 60 / 60
+        Application.Wait (Now + TimeValue("0:00:02"))
+        TimerLopen_OpenDeur
+    End If
+Call ClearUnusedThemes
+    Application.ScreenUpdating = True
+End Sub
+
+Sub TimerLopen_OpenDeur()
+    If Not StopTimerOpenDeur Then
+        Spelblad.Range("B1").Value = Spelblad.Range("B1").Value - 1
+        CountdownOpenDeur = CountdownOpenDeur - TimeSerial(0, 0, 1)
+        If CountdownOpenDeur >= 0 Then
+            AnnuleerVorigeTimer "TimerLopen_OpenDeur"
+            VolgendeTimerUitvoering = Now + TimeSerial(0, 0, 1)
+            Application.OnTime EarliestTime:=VolgendeTimerUitvoering, Procedure:="TimerLopen_OpenDeur"
+        End If
+    End If
+End Sub
+
+Sub StopTimer_OpenDeur()
+    OntbrekendeAntwoorden_opendeur = ControleerOntbrekendeAntwoorden_OpenDeur()
+
+    StopTimerOpenDeur = True
+    AnnuleerVorigeTimer "TimerLopen_OpenDeur"
+
+    If Len(OntbrekendeAntwoorden_opendeur) > 0 Then
+        formnaopendeurloss1.OntbrekendeAntwoorden_opendeur.Value = OntbrekendeAntwoorden_opendeur
+        formnaopendeurloss1.Show
+        AnswerFormOpendeur.Hide
+    End If
+    
+End Sub
+Sub AnnuleerVorigeTimer(ProcedureName As String)
+    ' Annuleer de vorige timer voordat we een nieuwe starten
+    On Error Resume Next
+    Application.OnTime EarliestTime:=VolgendeTimerUitvoering, Procedure:=ProcedureName, Schedule:=False
+    On Error GoTo 0
+End Sub
+
+
+Function IsInCollection(col As Collection, val As Variant) As Boolean
+    Dim element As Variant
+    On Error GoTo ErrHandler
+    For Each element In col
+        If element = val Then
+            IsInCollection = True
+            Exit Function
+        End If
+    Next element
+    Exit Function
+ErrHandler:
+    IsInCollection = False
+End Function
+Sub ValidateAnswer()
+    Dim ws As Worksheet
+    Set ws = ThisWorkbook.Sheets("Open Deur")
+
+    ' Haal het gegeven antwoord op
+    Dim givenAnswer As String
+    givenAnswer = ws.Range("D1").Value
+
+    ' Haal het gekozen thema op
+    Dim chosenTheme As String
+    chosenTheme = ws.Range("H22").Value
+
+    ' Ga door de mogelijke antwoorden voor het gekozen thema
+    Dim answerFound As Boolean
+    answerFound = False
+
+    Dim i As Integer
+    For i = 2 To 4
+        If ws.Range("A" & i).Value = chosenTheme Then
+            ' Controleer of het gegeven antwoord overeenkomt met een van de antwoorden voor dit thema
+            Dim j As Integer
+            For j = 2 To 5
+                ' Als het antwoord een ";" bevat, behandel dan beide delen afzonderlijk
+                If InStr(ws.Range(Chr(j + 64) & i).Value, ";") > 0 Then
+                    Dim splitAnswer As Variant
+                    splitAnswer = Split(ws.Range(Chr(j + 64) & i).Value, ";")
+                    Dim k As Integer
+                    For k = LBound(splitAnswer) To UBound(splitAnswer)
+                        If Levenshtein2(CStr(splitAnswer(k)), givenAnswer) <= 2 Then
+                            answerFound = True
+                            ws.Range("D1").Value = splitAnswer(0)
+                            Exit For
+                        End If
+                    Next k
+                ' Als het antwoord geen ";" bevat, behandel het dan als een enkel antwoord
+                ElseIf Levenshtein2(ws.Range(Chr(j + 64) & i).Value, givenAnswer) <= 2 Then
+                    answerFound = True
+                    ws.Range("D1").Value = ws.Range(Chr(j + 64) & i).Value
+                End If
+            Next j
+            If answerFound Then Exit For
+        End If
+    Next i
+
+    ' Als het gegeven antwoord correct is, voeg het toe aan de correcte antwoordenlijst
+    If answerFound Then
+        Dim row As Integer
+        For row = 18 To 21
+            If ws.Range("A" & row).Value = "" Then
+                ws.Range("A" & row).Value = ws.Range("D1").Value
+                ws.Range("B1").Value = ws.Range("B1").Value + 40 ' Voeg 1 toe aan de waarde in cel B1
+                Exit For
+            End If
+        Next row
+    End If
+    ' Wis het gegeven antwoord
+   ws.Range("d1").Value = ""
+    Range("a1").Select
+End Sub
+Sub ClearUnusedThemes()
+    Dim ws As Worksheet
+    Set ws = ThisWorkbook.Sheets("Open Deur")
+    
+    ' Haal het gekozen thema op
+    Dim chosenTheme As String
+    chosenTheme = ws.Range("H22").Value
+
+    ' Wis de cellen voor de niet-gekozen thema's
+    Dim i As Integer
+    For i = 2 To 4
+        If ws.Range("A" & i).Value <> chosenTheme Then
+            ws.Range("A" & i & ":E" & i).ClearContents
+        End If
+    Next i
+End Sub
+Sub answer2()
+    With AnswerFormOpendeur
+        .StartUpPosition = 0 'Handmatig
+        .Top = 420
+        .Left = 765
+        .Height = 145  ' Verander dit naar de gewenste hoogte
+        .Width = 257   ' Verander dit naar de gewenste breedte
+        .Show
+End With
+End Sub
+
