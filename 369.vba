@@ -1,6 +1,6 @@
 Option Explicit
 
-Const TOTAAL_VRAGEN As Integer = 296
+Const TOTAAL_VRAGEN As Integer = 349
 Const CEL_RESTERENDE_TIJD As String = "C1"
 Const CEL_HUIDIGE_VRAAG As String = "E1"
 Const CEL_SCORE As String = "D1"
@@ -11,84 +11,115 @@ Const WERKBLAD_MENU As String = "Menu"
 
 
 Dim resterendetijd As Integer
-Dim NextTime As Date
+Dim VolgendeTijd As Date
 Dim Vraagnummer As Integer
 Dim score As Integer
+Dim IsAftellenActief As Boolean
 
 Sub StartTijd_369()
     ' Stop de timer indien die al loopt
     Call StopTijd_369
 
-    ' Reset de resterende tijd naar 20 seconden
-    resterendetijd = 20
-    
-    ' Update de weergave van de tijd
+    ' Reset de resterende tijd naar 30 seconden
+    resterendetijd = 30
     Call UpdateTijd_369
-
-    ' Bepaal het moment waarop de volgende update moet plaatsvinden
-    ' (over 3 seconden vanaf het huidige moment, zodat de speler enige tijd heeft om de vraag te lezen)
-    NextTime = Now + TimeSerial(0, 0, 3)
-
-    ' Stel de timer in om de "Aftellen_369" procedure aan te roepen op het moment dat is berekend
-    Application.OnTime NextTime, "Aftellen_369"
+        VolgendeTijd = Now + TimeSerial(0, 0, 1)
+    Application.OnTime VolgendeTijd, "Aftellen_369"
 End Sub
 Sub UpdateTijd_369()
     ' Verlaag de resterende tijd met 1 seconde als er nog tijd over is
-    If resterendetijd >= 1 Then
+    If resterendetijd > 0 Then
         resterendetijd = resterendetijd - 1
     End If
 
     ' Update de CEL_RESTERENDE_TIJD in het WERKBLAD_SPEL met de nieuwe resterende tijd
     Worksheets(WERKBLAD_SPEL).Range(CEL_RESTERENDE_TIJD).Value = resterendetijd
 End Sub
+
 Sub Aftellen_369()
-    Dim HuidigeVraagNummer As Integer
+    ' Controleer of de aftelling al actief is
+    If IsAftellenActief Then Exit Sub
+
+    ' Zet de aftelling op actief
+    IsAftellenActief = True
+    Dim HuidigeVraagnummer As Integer
     Dim CorrecteAntwoorden As String
     If resterendetijd > 0 Then
-        Call UpdateTijd_369
-        NextTime = Now + TimeValue("00:00:01")
-        Application.OnTime NextTime, "Aftellen_369"
-    ElseIf resterendetijd < 1 Then        ' Als de tijd op is, toon UserForm5
+    Call UpdateTijd_369
+        VolgendeTijd = Now + TimeSerial(0, 0, 1)
+    Application.OnTime VolgendeTijd, "Aftellen_369"
+  If resterendetijd <= 1 Then
+        ' Haal het huidige vraagnummer
         With Sheets(WERKBLAD_SPEL)
-            HuidigeVraagNummer = .Range(CEL_HUIDIGE_VRAAG).Value
+            HuidigeVraagnummer = .Range(CEL_HUIDIGE_VRAAG).Value
         End With
 
         ' Haal het correcte antwoord op
-        CorrecteAntwoorden = Sheets(WERKBLAD_VRAGEN).Cells(HuidigeVraagNummer, 2).Value
-        ' Stel de tekst van het label in op het correcte antwoord
-        UserForm5.Label1.Caption = "Ai, de tijd is om! Het juiste antwoord was: " & CorrecteAntwoorden
-        UserForm5.Show
-    End If
-    If HuidigeVraagNummer = 15 Then
-        Call ToonEindeQuizFormulier
+        CorrecteAntwoorden = Sheets(WERKBLAD_VRAGEN).Cells(HuidigeVraagnummer, 2).Value
+End If
+    ' Als er al 15 vragen zijn gesteld, beëindig het spel
+    If HuidigeVraagnummer >= 15 Then
+        formna369.Show
         Exit Sub
-    End If
-    ActiveSheet.Shapes.Range(Array("Vraag")).Select
+ActiveSheet.Shapes.Range(Array("Vraag369")).Select
     With Selection.ShapeRange.TextFrame2.TextRange.Font.Fill
         .Transparency = 1
         .Solid
-    End With
-
-    HuidigeVraagNummer = HuidigeVraagNummer + 1
-    Sheets("3-6-9").Range("E1").Value = HuidigeVraagNummer
-    Sheets("3-6-9").Range("A1").Value = Sheets("Vragen").Cells(HuidigeVraagNummer, 1).Value
-    Sheets("3-6-9").Range("a1").ClearContents
-    resterendetijd = 20 ' Deze regel is aangepast
-    Call VolgendeVraag
-    Range("C13").Select
+        
+        HuidigeVraagnummer = HuidigeVraagnummer + 1
+Sheets("3-6-9").Range("E1").Value = HuidigeVraagnummer
+Sheets("3-6-9").Range("A1").Value = Sheets("Vragen").Cells(HuidigeVraagnummer, 1).Value
+Sheets("3-6-9").Range("a1").ClearContents
+Sheets("3-6-9").Range("B1").ClearContents
+Sheets("3-6-9").Range("F1").ClearContents
+resterendetijd = 30 ' Deze regel is aangepast
+Range("C13").Select
+StopTijd_369
+Call VolgendeVraag
+End With
+Range("C13").Select
+End If
+End If
+    ' Zet de aftelling op inactief aan het einde van de subroutine
+    IsAftellenActief = False
 End Sub
+
+Sub Tijd_369()
+    Dim HuidigeVraagnummer As Integer
+        Dim CorrecteAntwoorden As String
+        
+    HuidigeVraagnummer = Sheets("3-6-9").Range("E1").Value
+ ' Haal het correcte antwoord op
+        CorrecteAntwoorden = Sheets(WERKBLAD_VRAGEN).Cells(HuidigeVraagnummer, 2).Value
+        
+Tijdvoorbij369.Label1.Caption = "Helaas, de tijd is om!" & vbNewLine & "Het antwoord was:" & vbNewLine & vbNewLine & Split(CorrecteAntwoorden, ";")(0)
+       
+        ' Anders, ga naar de volgende vraag
+ HuidigeVraagnummer = HuidigeVraagnummer + 1
+        With Sheets("3-6-9")
+            .Range("E1").Value = HuidigeVraagnummer
+            .Range("A1").Value = Sheets("Vragen").Cells(HuidigeVraagnummer, 1).Value
+            .Range("A1").ClearContents
+            .Range("B1").ClearContents
+            .Range("C1").Value = 30
+        End With
+    Call VolgendeVraag
+End Sub
+
+
+
 Sub StopTijd_369()
     ' Het gebruik van On Error Resume Next zorgt ervoor dat de uitvoering van de code doorgaat, ook al treedt er een runtime-fout op
     On Error Resume Next
     
     ' Annuleer het geplande aftellen
-    Application.OnTime EarliestTime:=NextTime, Procedure:="Aftellen_369", Schedule:=False
+    Application.OnTime EarliestTime:=VolgendeTijd, Procedure:="Aftellen_369", Schedule:=False
     
     ' Reset de foutafhandeling
     On Error GoTo 0
 End Sub
 Sub ControleerAntwoord()
-    Dim HuidigeVraag As Integer
+    Dim HuidigeVraagnummer As Integer
     Dim resterendetijd As Integer
     Dim antwoord As String
     Dim CorrecteAntwoorden As String
@@ -98,14 +129,13 @@ Sub ControleerAntwoord()
     Dim correctIndex As Integer
 
     With Sheets("3-6-9")
-        HuidigeVraag = .Range("E1").Value
+        HuidigeVraagnummer = .Range("E1").Value
         score = .Range("D1").Value
         antwoord = LCase(Trim(.Range("b1").Value))
     End With
-    
-
-    ' Haal de correcte antwoorden op en splits ze in een array
-    CorrecteAntwoorden = Sheets("Vragen").Cells(HuidigeVraag, 2).Value
+    ' Stop de timer
+    Call StopTijd_369
+    CorrecteAntwoorden = Sheets("Vragen").Cells(HuidigeVraagnummer, 2).Value
     CorrectAntwoordArray = Split(CorrecteAntwoorden, ";")
     
     ' Vergelijk het antwoord met elk correct antwoord
@@ -131,58 +161,65 @@ Sub ControleerAntwoord()
         End If
     Next i
 
+
     Dim UserMessage As String
     If correctGevonden Then
-        UserMessage = "Goed gedaan!" & vbNewLine & "Het antwoord was inderdaad:" & vbNewLine & vbNewLine & Split(CorrecteAntwoorden, ";")(0)
-        UserForm4.Label3.Caption = UserMessage
-        UserForm4.Show
-    If HuidigeVraag Mod 3 = 0 Then
+        UserMessage = "Goed gedaan!" & vbNewLine & vbNewLine & "Het antwoord was inderdaad:" & vbNewLine & Trim(CorrectAntwoordArray(correctIndex))
+        Juistantwoord369.Label1.Caption = UserMessage
+        Juistantwoord369.Show
+        If HuidigeVraagnummer Mod 3 = 0 Then
         ' Verhoog de score
         score = score + 10
         Sheets("3-6-9").Range("d1").Value = score
     End If
     Else
-        UserMessage = "Helaas!" & vbNewLine & vbNewLine & "Het juiste antwoord was: " & vbNewLine & vbNewLine & Split(CorrecteAntwoorden, ";")(0)
-        UserForm4.Label3.Caption = UserMessage
-        UserForm4.Show
+        UserMessage = "Helaas!" & vbNewLine & vbNewLine & "Het antwoord had moeten zijn:" & vbNewLine & Trim(CorrectAntwoordArray(correctIndex))
+        Onjuistantwoord369.Label1.Caption = UserMessage
+        Onjuistantwoord369.Show
     End If
-
-
-
     ' Controleer het huidige vraagnummer
-    HuidigeVraag = Sheets("3-6-9").Range("E1").Value
-    If HuidigeVraag <= 15 Then
-    Call VolgendeVraag
-    
+    HuidigeVraagnummer = Sheets("3-6-9").Range("E1").Value
+
     ' Als er al 15 vragen zijn gesteld, beëindig het spel
-    ElseIf HuidigeVraag > 15 Then
+    If HuidigeVraagnummer >= 15 Then
     Call StopTijd_369
-        Call ToonEindeQuizFormulier
+formna369.Show
         Exit Sub
-        End If
+    Else
+        ' Anders, ga naar de volgende vraag
+        HuidigeVraagnummer = HuidigeVraagnummer + 1
+        With Sheets("3-6-9")
+            .Range("E1").Value = HuidigeVraagnummer
+            .Range("A1").Value = Sheets("Vragen").Cells(HuidigeVraagnummer, 1).Value
+            .Range("A1").ClearContents
+            .Range("B1").ClearContents
+            .Range("C1").Value = 30
+        End With
+    End If
+    Call VolgendeVraag
 End Sub
 Sub VolgendeVraag()
     Dim TotaalVragen As Integer
     Dim BerichtTeksten As Variant
     Dim VraagIndex As Integer
     Dim WillekeurigeIndex As Integer
-    With ActiveSheet.Shapes("Vraag").TextFrame2.TextRange.Font.Fill
+    With ActiveSheet.Shapes("Vraag369").TextFrame2.TextRange.Font.Fill
         .Transparency = 1
     End With
     Range("C13").Select
-
+        Call StopTijd_369
     ' Initialiseer de BerichtTeksten array
     BerichtTeksten = Array("Maak je klaar voor vraag ", "Hier komt vraag ", "De volgende vraag is vraag ", "Klaar voor de volgende vraag?" & vbNewLine & "Hier komt vraag nummer ")
 
-    ' Kies een willekeurige index
-    WillekeurigeIndex = Int((UBound(BerichtTeksten) - LBound(BerichtTeksten) + 1) * Rnd + LBound(BerichtTeksten))
+' Kies een willekeurige index
+WillekeurigeIndex = Int((UBound(BerichtTeksten) - LBound(BerichtTeksten) + 1) * Rnd + LBound(BerichtTeksten))
 
     TotaalVragen = Worksheets(WERKBLAD_VRAGEN).Cells(Rows.Count, 1).End(xlUp).row
     VraagIndex = Int((TotaalVragen - 1 + 1) * Rnd + 1)
     Worksheets(WERKBLAD_SPEL).Range("A1").Value = Worksheets(WERKBLAD_VRAGEN).Range("A" & Vraagnummer + 1).Value
-
-
-    ' Bereid de boodschap voor de gebruiker voor
+    Vraagnummer = Vraagnummer + 1
+    Worksheets(WERKBLAD_SPEL).Range(CEL_HUIDIGE_VRAAG).Value = Vraagnummer
+   ' Bereid de boodschap voor de gebruiker voor
     Dim UserMessage As String
     Select Case Vraagnummer
         Case 1
@@ -191,38 +228,44 @@ Sub VolgendeVraag()
             UserForm3.Show
         Case 3, 6, 9, 12
             UserMessage = BerichtTeksten(WillekeurigeIndex) & Vraagnummer & ". " & vbNewLine & vbNewLine & "Als je de volgende vraag goed beantwoordt, win je 10 seconden!"
-            UserForm4.Label3.Caption = UserMessage
-            UserForm4.Show
+            UserForm3.Label1.Caption = UserMessage
+            UserForm3.Show
         Case 15
             UserMessage = "We zijn alweer toegekomen aan de laatste vraag van deze ronde!" & vbNewLine & vbNewLine & "Ook deze vraag is goed voor 10 seconden!"
-            UserForm4.Label3.Caption = UserMessage
-            UserForm4.Show
-        Case 2, 4, 5, 7, 8, 10, 11, 13, 14
+            UserForm3.Label1.Caption = UserMessage
+            UserForm3.Show
+        Case Else
             UserMessage = BerichtTeksten(WillekeurigeIndex) & Vraagnummer & "."
             UserForm3.Label1.Caption = UserMessage
             UserForm3.Show
     End Select
-    ' Toon de vraag na het starten van de timer en na het sluiten van de MsgBox
-    With ActiveSheet.Shapes("Vraag").TextFrame2.TextRange.Font.Fill
-        .Transparency = 0
-        End With
-    ' Bepaal het moment waarop de volgende update moet plaatsvinden
-    ' (over 3 seconden vanaf het huidige moment, zodat de speler enige tijd heeft om de vraag te lezen)
-    NextTime = Now + TimeValue("00:00:03")
+    ' Reset de resterende tijd naar 20 seconden
+    resterendetijd = 30
     
-    ' Stel de timer in om de "Aftellen_369" procedure aan te roepen op het moment dat is berekend
-    Application.OnTime NextTime, "Aftellen_369"
+    ' Stop de timer indien die al loopt
+    Call Aftellen_369
+
+    ' Toon de vraag na het starten van de timer en na het sluiten van de MsgBox
+    With ActiveSheet.Shapes("Vraag369").TextFrame2.TextRange.Font.Fill
+        .Transparency = 0
+    End With
 End Sub
 
 Sub StartSpel_369()
     ' Reset de timer
-    resterendetijd = 20
+    resterendetijd = 30
 
     ' Reset de score
     score = 60
 
     ' Reset het vraagnummer
     Vraagnummer = 0
+
+    ' Update de worksheet
+    With Worksheets(WERKBLAD_SPEL)
+        .Range(CEL_RESTERENDE_TIJD).Value = resterendetijd
+        .Range(CEL_SCORE).Value = score
+    End With
     
     ' Shuffle de vragen
     Call SorteerVragenWillekeurig
@@ -241,9 +284,7 @@ Sub ToonVragenWerkblad()
 End Sub
 
 Sub BeantwoordVraag_369()
-    With Antwoord_369
-        .Show
-    End With
+Antwoordform369.Show
 End Sub
 
 Sub SorteerVragenWillekeurig()
@@ -255,7 +296,7 @@ Sub SorteerVragenWillekeurig()
     Dim i As Long, j As Long
     
    ' Definieer het bereik dat gesorteerd moet worden
-    Set WerkBereik = ThisWorkbook.Worksheets(WERKBLAD_VRAGEN).Range("A1:B296")
+    Set WerkBereik = ThisWorkbook.Worksheets(WERKBLAD_VRAGEN).Range("A1:B349")
 
     ' Zet het bereik in een array
     WerkArray = WerkBereik.Value
@@ -285,39 +326,56 @@ Sub SorteerVragenWillekeurig()
 
 End Sub
 Sub Pas_369()
-     Dim HuidigeVraagNummer As Integer
+    Dim HuidigeVraagnummer As Integer
     Dim resterendetijd As Integer
     Dim antwoord As String
     Dim CorrecteAntwoorden As String
     Dim CorrecteAntwoordArray() As String
     Dim i As Integer
     Dim correctGevonden As Boolean
-
+    Dim correctIndex As Integer
+    Call StopTijd_369
     With Sheets(WERKBLAD_SPEL)
-        HuidigeVraagNummer = .Range(CEL_HUIDIGE_VRAAG).Value
+        HuidigeVraagnummer = .Range(CEL_HUIDIGE_VRAAG).Value
     End With
 
         ' Haal het correcte antwoord op
-        CorrecteAntwoorden = Sheets(WERKBLAD_VRAGEN).Cells(HuidigeVraagNummer, 2).Value
+        CorrecteAntwoorden = Sheets(WERKBLAD_VRAGEN).Cells(HuidigeVraagnummer, 2).Value
  If InStr(CorrecteAntwoorden, ";") > 0 Then
     antwoord = Split(CorrecteAntwoorden, ";")(0)
 Else
     antwoord = CorrecteAntwoorden
     End If
-With UserForm5
-    .Label2.Caption = "Helaas!" & vbNewLine & "Het juiste antwoord was:" & vbNewLine & vbNewLine & antwoord
+With PasVraag369
+    .Label1.Caption = "Helaas!" & vbNewLine & "Het juiste antwoord was:" & vbNewLine & vbNewLine & antwoord
     .Show
 End With
-    ' Als HuidigeVraagNummer groter dan of gelijk aan 15 is, stop dan de quiz
-    If HuidigeVraagNummer >= 15 Then
-        Call ToonEindeQuizFormulier
+    If HuidigeVraagnummer >= 15 Then
+        formna369.Show
         Exit Sub
     End If
     Call VolgendeVraag
 End Sub
-Sub ToonEindeQuizFormulier()
-With formna369
-        .StartUpPosition = 1 'Handmatig
-        .Show
+
+Sub Hide()
+With ActiveSheet.Shapes("Vraag369").TextFrame2.TextRange.Font.Fill
+    .Transparency = 1
 End With
+End Sub
+Sub Show()
+With ActiveSheet.Shapes("Vraag369").TextFrame2.TextRange.Font.Fill
+    .Transparency = 0
+End With
+End Sub
+
+Sub KopieerWaarde()
+    Dim huidigWerkblad As Worksheet
+    Dim doelWerkblad As Worksheet
+
+    ' Stel het huidige werkblad en het doelwerkblad in
+    Set huidigWerkblad = ActiveSheet
+    Set doelWerkblad = ThisWorkbook.Sheets("Open Deur")
+
+    ' Kopieer de waarde van cel D1 van het huidige werkblad naar cel B1 van het doelwerkblad
+    doelWerkblad.Range("B1").Value = huidigWerkblad.Range("D1").Value
 End Sub
